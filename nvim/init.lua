@@ -18,3 +18,5 @@ map("v", "<leader>/", "gc", { desc = "toggle comment", remap = true })
 map('n', '<leader>qo', ':tabo<CR>', { remap = true })
 map("n", "<Esc>", "<cmd>noh<CR>", { desc = "general clear highlights" })
 
+map("n", "H", "gt", opts)
+map("n", "L", "gT", opts)
