@@ -21,9 +21,12 @@ map("n", "<Esc>", "<cmd>noh<CR>", { desc = "general clear highlights" })
 if vim.g.vscode then
   map("n", "H", "gt", opts)
   map("n", "L", "gT", opts)
+
+  map('n', '<leader>=', '<Cmd>call VSCodeNotify("editor.action.formatDocument")<CR>', opts)
 else
   map("n", "H", "gt", opts)
   map("n", "L", "gT", opts)
+  map('n', '<leader>=', 'ggVG=', opts)
 end
 
 
