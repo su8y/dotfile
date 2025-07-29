@@ -15,12 +15,12 @@ map("v", ">", ">gv", opts)
 
 map("n", "<leader>/", "gcc", { desc = "toggle comment", remap = true })
 map("v", "<leader>/", "gc", { desc = "toggle comment", remap = true })
-map('n', '<leader>qo', ':tabo<CR>', { remap = true })
+map('n', '<leader>qo', ':tabo<CR>', { remap = true, silent = true })
 map("n", "<Esc>", "<cmd>noh<CR>", { desc = "general clear highlights" })
+map("n", "H", "gt", { remap = true, silent = true })
+map("n", "L", "gT", { remap = true, silent = true })
 
 if vim.g.vscode then
-  map("n", "H", "gt", opts)
-  map("n", "L", "gT", opts)
 
   map('n', '<leader>=', '<Cmd>call VSCodeNotify("editor.action.formatDocument")<CR>', opts)
   -- general keymaps
@@ -69,8 +69,6 @@ if vim.g.vscode then
   map("n", "zm", "<Cmd>lua require('vscode').action('editor.foldAll')<CR>", opts)  -- fold more (collapse deeper)
   map("n", "zr", "<Cmd>lua require('vscode').action('editor.unfoldAll')<CR>", opts) -- reduce fold (open some)
 else
-  map("n", "H", "gt", opts)
-  map("n", "L", "gT", opts)
   map('n', '<leader>=', 'ggVG=', opts)
 end
 
