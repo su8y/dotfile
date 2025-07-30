@@ -1,75 +1,117 @@
-local map = vim.keymap.set
-local opts = { noremap = true, silent = true }
-
-vim.api.nvim_set_keymap('n', 'j', 'gj', opts)
-vim.api.nvim_set_keymap('n', 'k', 'gk', opts)
-vim.api.nvim_set_keymap('n', '<c-u>', '20gk', opts)
-vim.api.nvim_set_keymap('n', '<c-d>', '20gj', opts)
+-- 맵 리더 설정 (가장 먼저 설정하는 것이 좋음)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
-map("n", "<", "<<", opts)
-map("n", ">", ">>", opts)
-map("v", "<", "<gv", opts)
-map("v", ">", ">gv", opts)
+-- 키맵 유틸리티 설정
+local map = vim.keymap.set
+-- 기본 옵션: non-recursive, silent
+local base_opts = { noremap = true, silent = true }
 
-map("n", "<leader>/", "gcc", { desc = "toggle comment", remap = true })
-map("v", "<leader>/", "gc", { desc = "toggle comment", remap = true })
-map('n', '<leader>qo', ':tabo<CR>', { remap = true, silent = true })
-map("n", "<Esc>", "<cmd>noh<CR>", { desc = "general clear highlights" })
-map("n", "H", "gt", { remap = true, silent = true })
-map("n", "L", "gT", { remap = true, silent = true })
+---
+--  बेसिक 에디터 매핑 (Neovim / VSCode 공통)
+---
+
+-- 줄바꿈시에도 시각적 이동 (j/k)
+map('n', 'j', 'gj', { noremap = true, desc = "Move visual line down" })
+map('n', 'k', 'gk', { noremap = true, desc = "Move visual line up" })
+
+-- 스크롤 (20줄)
+map('n', '<c-u>', '20gk', { noremap = true, silent = true, desc = "Scroll 20 lines up" })
+map('n', '<c-d>', '20gj', { noremap = true, silent = true, desc = "Scroll 20 lines down" })
+
+-- 인덴트 (Normal & Visual 모드)
+map("n", "<", "<<", { noremap = true, silent = true, desc = "Decrease indent" })
+map("n", ">", ">>", { noremap = true, silent = true, desc = "Increase indent" })
+map("v", "<", "<gv", { noremap = true, silent = true, desc = "Decrease indent (Visual)" })
+map("v", ">", ">gv", { noremap = true, silent = true, desc = "Increase indent (Visual)" })
+
+-- 주석 (플러그인 매핑 호출을 위해 remap = true)
+map("n", "<leader>/", "gcc", { remap = true, silent = true, desc = "Toggle comment" })
+map("v", "<leader>/", "gc", { remap = true, silent = true, desc = "Toggle comment (Visual)" })
+
+-- 검색 하이라이트 제거
+map("n", "<Esc>", "<cmd>noh<CR>", { silent = true, desc = "Clear search highlights" })
+
+-- 코드 포매팅 
+map('n', '<leader>=', 'ggVG=', { noremap = true, silent = true, desc = "Format entire file" })
+
+-- 탭 이동
+map("n", "H", "gt", { remap = true, silent = true, desc = "Previous tab" })
+map("n", "L", "gT", { remap = true, silent = true, desc = "Next tab" })
+
+-- 다른 탭 모두 닫기
+map('n', '<leader>qo', ':tabo<CR>', { remap = true, silent = true, desc = "Tab only (close others)" })
+
 
 if vim.g.vscode then
+  -- ===============================
+  --  VSCode Neovim Extension Mappings
+  -- ===============================
 
-  map('n', '<leader>=', '<Cmd>call VSCodeNotify("editor.action.formatDocument")<CR>', opts)
-  -- general keymaps
-  map({"n", "v"}, "<leader>e", "<cmd>lua require('vscode').action('workbench.view.explorer')<CR>")
-  map({"n", "v"}, "<leader>ql", "<cmd>lua require('vscode').action('workbench.action.closeEditorsToTheRight')<CR>")
-  map({"n", "v"}, "<leader>qh", "<cmd>lua require('vscode').action('workbench.action.closeEditorsToTheLeft')<CR>")
-  map({"n", "v"}, "]d", "<cmd>lua require('vscode').action('editor.action.marker.next')<CR>")
-  map({"n", "v"}, "[d", "<cmd>lua require('vscode').action('editor.action.marker.prev')<CR>")
-  map({"n", "v"}, "<leader>t", "<cmd>lua require('vscode').action('workbench.action.terminal.toggleTerminal')<CR>")
-  map({"n", "v"}, "<leader>b", "<cmd>lua require('vscode').action('editor.debug.action.toggleBreakpoint')<CR>")
-  map({"n", "v"}, "K", "<cmd>lua require('vscode').action('editor.action.showHover')<CR>")
-  map({"n", "v"}, "<leader>a", "<cmd>lua require('vscode').action('editor.action.quickFix')<CR>")
-  map({"n", "v"}, "<leader>sp", "<cmd>lua require('vscode').action('workbench.actions.view.problems')<CR>")
-  map({"n", "v"}, "<leader>cn", "<cmd>lua require('vscode').action('notifications.clearAll')<CR>")
-  map({"n", "v"}, "<leader>ff", "<cmd>lua require('vscode').action('workbench.action.quickOpen')<CR>")
-  map({"n", "v"}, "<leader>cp", "<cmd>lua require('vscode').action('workbench.action.showCommands')<CR>")
-  map({"n", "v"}, "<leader>pr", "<cmd>lua require('vscode').action('code-runner.run')<CR>")
-  map("n", "H", "<Cmd>lua require('vscode').action('workbench.action.previousEditor')<CR>", opts)
-  map("n", "L", "<Cmd>lua require('vscode').action('workbench.action.nextEditor')<CR>", opts)
+  -- VSCode action 호출을 위한 헬퍼 함수
+  local function vsc(action)
+    return string.format("<cmd>lua require('vscode').action('%s')<CR>", action)
+  end
 
-  -- harpoon keymaps
-  map({"n", "v"}, "<leader>ha", "<cmd>lua require('vscode').action('vscode-harpoon.addEditor')<CR>")
-  map({"n", "v"}, "<leader>ho", "<cmd>lua require('vscode').action('vscode-harpoon.editorQuickPick')<CR>")
-  map({"n", "v"}, "<leader>he", "<cmd>lua require('vscode').action('vscode-harpoon.editEditors')<CR>")
-  map({"n", "v"}, "<leader>h1", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor1')<CR>")
-  map({"n", "v"}, "<leader>h2", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor2')<CR>")
-  map({"n", "v"}, "<leader>h3", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor3')<CR>")
-  map({"n", "v"}, "<leader>h4", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor4')<CR>")
-  map({"n", "v"}, "<leader>h5", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor5')<CR>")
-  map({"n", "v"}, "<leader>h6", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor6')<CR>")
-  map({"n", "v"}, "<leader>h7", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor7')<CR>")
-  map({"n", "v"}, "<leader>h8", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor8')<CR>")
-  map({"n", "v"}, "<leader>h9", "<cmd>lua require('vscode').action('vscode-harpoon.gotoEditor9')<CR>")
+  -- 각 매핑에 사용할 기본 옵션 (desc는 개별 추가)
+  local opts = { noremap = true, silent = true }
 
-  -- project manager keymaps
-  map({"n", "v"}, "<leader>pa", "<cmd>lua require('vscode').action('projectManager.saveProject')<CR>")
-  map({"n", "v"}, "<leader>po", "<cmd>lua require('vscode').action('projectManager.listProjectsNewWindow')<CR>")
-  map({"n", "v"}, "<leader>pe", "<cmd>lua require('vscode').action('projectManager.editProjects')<CR>")
-  map({"n", "v"}, "?", "<cmd>lua require('vscode').action('workbench.action.findInFiles')<CR>")
-  map("n", "zc", "<Cmd>lua require('vscode').action('editor.fold')<CR>", opts)      -- close fold (unfold)
-  map("n", "zC", "<Cmd>lua require('vscode').action('editor.foldRecursively')<CR>", opts) -- unfold all sublevels
-  map("n", "zo", "<Cmd>lua require('vscode').action('editor.unfold')<CR>", opts)        -- open fold (fold one level)
-  map("n", "zO", "<Cmd>lua require('vscode').action('editor.unfoldRecursively')<CR>", opts) -- open fold recursively
-  map("n", "za", "<Cmd>lua require('vscode').action('editor.foldToggle')<CR>", opts)  -- toggle current fold
-  map("n", "zA", "<Cmd>lua require('vscode').action('editor.foldRecursivelyToggle')<CR>", opts) -- toggle recursively
-  map("n", "zm", "<Cmd>lua require('vscode').action('editor.foldAll')<CR>", opts)  -- fold more (collapse deeper)
-  map("n", "zr", "<Cmd>lua require('vscode').action('editor.unfoldAll')<CR>", opts) -- reduce fold (open some)
+  -- 1. 포맷팅 & 일반
+  map('n', '<leader>=', vsc('editor.action.formatDocument'), { noremap = true, silent = true, desc = "Format document" })
+  map({"n", "v"}, "K", vsc('editor.action.showHover'), { noremap = true, silent = true, desc = "Show hover" })
+  map({"n", "v"}, "<leader>a", vsc('editor.action.quickFix'), { noremap = true, silent = true, desc = "Quick fix" })
+  map({"n", "v"}, "?", vsc('workbench.action.findInFiles'), { noremap = true, silent = true, desc = "Find in files" })
+
+  -- 2. 탐색기 & 에디터(탭) 이동
+  map({"n", "v"}, "<leader>e", vsc('workbench.view.explorer'), { noremap = true, silent = true, desc = "Toggle explorer" })
+  map({"n", "v"}, "<leader>ql", vsc('workbench.action.closeEditorsToTheRight'), { noremap = true, silent = true, desc = "Close editors to the right" })
+  map({"n", "v"}, "<leader>qh", vsc('workbench.action.closeEditorsToTheLeft'), { noremap = true, silent = true, desc = "Close editors to the left" })
+
+  -- 3. 터미널 & 실행
+  map({"n", "v"}, "<leader>t", vsc('workbench.action.terminal.toggleTerminal'), { noremap = true, silent = true, desc = "Toggle terminal" })
+  map({"n", "v"}, "<leader>pr", vsc('code-runner.run'), { noremap = true, silent = true, desc = "Code runner: Run" })
+
+  -- 4. 진단 & 알림 (Diagnostics)
+  map({"n", "v"}, "]d", vsc('editor.action.marker.next'), { noremap = true, silent = true, desc = "Next diagnostic" })
+  map({"n", "v"}, "[d", vsc('editor.action.marker.prev'), { noremap = true, silent = true, desc = "Previous diagnostic" })
+  map({"n", "v"}, "<leader>sp", vsc('workbench.actions.view.problems'), { noremap = true, silent = true, desc = "Show problems view" })
+  map({"n", "v"}, "<leader>cn", vsc('notifications.clearAll'), { noremap = true, silent = true, desc = "Clear all notifications" })
+
+  -- 5. 디버깅
+  map({"n", "v"}, "<leader>b", vsc('editor.debug.action.toggleBreakpoint'), { noremap = true, silent = true, desc = "Toggle breakpoint" })
+
+  -- 6. 빠른 열기 & 커맨드 팔레트
+  map({"n", "v"}, "<leader>ff", vsc('workbench.action.quickOpen'), { noremap = true, silent = true, desc = "Find file (Quick Open)" })
+  map({"n", "v"}, "<leader>cp", vsc('workbench.action.showCommands'), { noremap = true, silent = true, desc = "Show command palette" })
+
+  -- 7. Harpoon (VSCode Extension)
+  map({"n", "v"}, "<leader>ha", vsc('vscode-harpoon.addEditor'), { noremap = true, silent = true, desc = "Harpoon: Add editor" })
+  map({"n", "v"}, "<leader>ho", vsc('vscode-harpoon.editorQuickPick'), { noremap = true, silent = true, desc = "Harpoon: Quick pick" })
+  map({"n", "v"}, "<leader>he", vsc('vscode-harpoon.editEditors'), { noremap = true, silent = true, desc = "Harpoon: Edit editors" })
+  map({"n", "v"}, "<leader>h1", vsc('vscode-harpoon.gotoEditor1'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 1" })
+  map({"n", "v"}, "<leader>h2", vsc('vscode-harpoon.gotoEditor2'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 2" })
+  map({"n", "v"}, "<leader>h3", vsc('vscode-harpoon.gotoEditor3'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 3" })
+  map({"n", "v"}, "<leader>h4", vsc('vscode-harpoon.gotoEditor4'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 4" })
+  map({"n", "v"}, "<leader>h5", vsc('vscode-harpoon.gotoEditor5'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 5" })
+  map({"n", "v"}, "<leader>h6", vsc('vscode-harpoon.gotoEditor6'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 6" })
+  map({"n", "v"}, "<leader>h7", vsc('vscode-harpoon.gotoEditor7'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 7" })
+  map({"n", "v"}, "<leader>h8", vsc('vscode-harpoon.gotoEditor8'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 8" })
+  map({"n", "v"}, "<leader>h9", vsc('vscode-harpoon.gotoEditor9'), { noremap = true, silent = true, desc = "Harpoon: Go to editor 9" })
+
+  -- 8. Project Manager (VSCode Extension)
+  map({"n", "v"}, "<leader>pa", vsc('projectManager.saveProject'), { noremap = true, silent = true, desc = "Project: Save project" })
+  map({"n", "v"}, "<leader>po", vsc('projectManager.listProjectsNewWindow'), { noremap = true, silent = true, desc = "Project: Open project" })
+  map({"n", "v"}, "<leader>pe", vsc('projectManager.editProjects'), { noremap = true, silent = true, desc = "Project: Edit projects" })
+
+  -- 9. 폴딩 (Folding)
+  map("n", "zc", vsc('editor.fold'), { noremap = true, silent = true, desc = "Fold" })
+  map("n", "zC", vsc('editor.foldRecursively'), { noremap = true, silent = true, desc = "Fold recursively" })
+  map("n", "zo", vsc('editor.unfold'), { noremap = true, silent = true, desc = "Unfold" })
+  map("n", "zO", vsc('editor.unfoldRecursively'), { noremap = true, silent = true, desc = "Unfold recursively" })
+  map("n", "za", vsc('editor.foldToggle'), { noremap = true, silent = true, desc = "Toggle fold" })
+  map("n", "zA", vsc('editor.foldRecursivelyToggle'), { noremap = true, silent = true, desc = "Toggle fold recursively" })
+  map("n", "zm", vsc('editor.foldAll'), { noremap = true, silent = true, desc = "Fold all" })
+  map("n", "zr", vsc('editor.unfoldAll'), { noremap = true, silent = true, desc = "Unfold all" })
+
 else
-  map('n', '<leader>=', 'ggVG=', opts)
 end
-
-
