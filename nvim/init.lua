@@ -36,8 +36,8 @@ map("n", "<Esc>", "<cmd>noh<CR>", { silent = true, desc = "Clear search highligh
 map('n', '<leader>=', 'ggVG=', { noremap = true, silent = true, desc = "Format entire file" })
 
 -- 탭 이동
-map("n", "H", "gt", { remap = true, silent = true, desc = "Previous tab" })
-map("n", "L", "gT", { remap = true, silent = true, desc = "Next tab" })
+map("n", "H", "gT", { remap = true, silent = true, desc = "Previous tab" })
+map("n", "L", "gt", { remap = true, silent = true, desc = "Next tab" })
 
 -- 다른 탭 모두 닫기
 map('n', '<leader>qo', ':tabo<CR>', { remap = true, silent = true, desc = "Tab only (close others)" })
