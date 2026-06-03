@@ -29,6 +29,7 @@ links=(
   "nvim/init.lua|$HOME/.config/nvim/init.lua"
   "jgit/config|$HOME/.config/jgit/config"
   "configstore/update-notifier-@google/gemini-cli.json|$HOME/.config/configstore/update-notifier-@google/gemini-cli.json"
+  "claude-sandbox/claude-box|$HOME/.local/bin/claude-box"
 )
 
 run() { if [ "$DRY" = 1 ]; then echo "  [dry] $*"; else eval "$@"; fi; }
@@ -67,3 +68,8 @@ echo
 echo "done.${DRY:+ (dry-run — nothing changed)}"
 echo "note: init-keyboard.sh is a one-time keyboard remap; run it manually if you want it:"
 echo "      bash \"$DOTDIR/init-keyboard.sh\""
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) echo "note: \$HOME/.local/bin is not in PATH — add it so 'claude-box' resolves:"
+     echo "      export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+esac
