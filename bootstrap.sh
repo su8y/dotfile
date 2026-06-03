@@ -27,8 +27,6 @@ done
 links=(
   ".ideavimrc|$HOME/.ideavimrc"
   "nvim/init.lua|$HOME/.config/nvim/init.lua"
-  "jgit/config|$HOME/.config/jgit/config"
-  "configstore/update-notifier-@google/gemini-cli.json|$HOME/.config/configstore/update-notifier-@google/gemini-cli.json"
   "claude-sandbox/claude-box|$HOME/.local/bin/claude-box"
 )
 
