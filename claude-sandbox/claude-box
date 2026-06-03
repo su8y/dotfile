@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# claude-box — run claude-code in a docker sandbox.
+#   current dir (pwd) is mounted read-only; only the given subdir is writable.
+#
+# usage: claude-box <writable-subdir> [claude args...]
+#   e.g. claude-box ./test/coding
+#        claude-box .              # whole pwd writable
+#
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "usage: claude-box <writable-subdir> [claude args...]" >&2
+  exit 2
+fi
+
+writedir="$1"
+shift
+
+mkdir -p "$writedir"
+base="$(pwd)"
+abs_write="$(cd "$writedir" && pwd)"
+
+# safety: the writable dir must live inside the current directory
+case "$abs_write/" in
+  "$base"/*) ;;
+  *) echo "claude-box: '$writedir' must be inside $base" >&2; exit 1 ;;
+esac
+rel="${abs_write#"$base"/}"
+
+# when the writable dir IS the base, mount it rw directly; otherwise overlay rw on the ro base
+if [ "$abs_write" = "$base" ]; then
+  mounts=(-v "$base":/home/su8y/work:rw)
+else
+  mounts=(-v "$base":/home/su8y/work:ro
+          -v "$abs_write":/home/su8y/work/"$rel":rw)
+fi
+
+exec docker run -it --rm \
+  "${mounts[@]}" \
+  -v "$HOME/.claude":/home/su8y/.claude \
+  -v "$HOME/.claude.json":/home/su8y/.claude.json \
+  -w /home/su8y/work \
+  --name "claude-sandbox-$(basename "$base")-$(date +%s)" \
+  claude-sandbox:latest \
+  --dangerously-skip-permissions "$@"
