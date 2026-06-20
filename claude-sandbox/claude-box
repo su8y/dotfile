@@ -24,8 +24,12 @@ usage() { sed -n '6,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 read_dirs=()
 use_docker=false
+writedir=""
+claude_args=()
 
-# ---- parse options (must precede <writable-subdir>) ----
+# ---- parse options; they may appear before or after <writable-subdir> ----
+# first bare token is the writable subdir; any further bare tokens (and
+# everything after `--`) are passed verbatim to claude.
 while [ $# -gt 0 ]; do
   case "$1" in
     -r|--read)
@@ -33,16 +37,20 @@ while [ $# -gt 0 ]; do
       read_dirs+=("$2"); shift 2 ;;
     -d|--docker) use_docker=true; shift ;;
     -h|--help)   usage; exit 0 ;;
-    --)          shift; break ;;
-    -*)          echo "claude-box: unknown option '$1'" >&2; usage; exit 2 ;;
-    *)           break ;;
+    --)          shift; claude_args+=("$@"); break ;;
+    -*)
+      if [ -z "$writedir" ]; then
+        echo "claude-box: unknown option '$1'" >&2; usage; exit 2
+      fi
+      claude_args+=("$1"); shift ;;   # after writedir, pass through to claude
+    *)
+      if [ -z "$writedir" ]; then writedir="$1"; else claude_args+=("$1"); fi
+      shift ;;
   esac
 done
 
-if [ $# -lt 1 ]; then usage; exit 2; fi
-
-writedir="$1"
-shift
+if [ -z "$writedir" ]; then usage; exit 2; fi
+set -- ${claude_args[@]+"${claude_args[@]}"}
 
 mkdir -p "$writedir"
 base="$(pwd)"
