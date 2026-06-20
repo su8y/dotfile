@@ -3,16 +3,43 @@
 # claude-box — run claude-code in a docker sandbox.
 #   current dir (pwd) is mounted read-only; only the given subdir is writable.
 #
-# usage: claude-box <writable-subdir> [claude args...]
-#   e.g. claude-box ./test/coding
-#        claude-box .              # whole pwd writable
+# usage: claude-box [options] <writable-subdir> [claude args...]
+#
+# options:
+#   -r, --read <dir>   mount an extra host dir read-only (repeatable)
+#   -d, --docker       run an isolated Docker-in-Docker daemon for integration
+#                      tests (Testcontainers). spins up a privileged sidecar on
+#                      a per-run private network; the host daemon is untouched.
+#   -h, --help         show this help
+#
+# examples:
+#   claude-box ./test/coding          # writable subdir
+#   claude-box .                      # whole pwd writable
+#   claude-box -r ../shared-libs .    # also read a sibling repo (read-only)
+#   claude-box -d ./service           # enable Testcontainers / integration tests
 #
 set -euo pipefail
 
-if [ $# -lt 1 ]; then
-  echo "usage: claude-box <writable-subdir> [claude args...]" >&2
-  exit 2
-fi
+usage() { sed -n '6,19p' "$0" | sed 's/^# \{0,1\}//'; }
+
+read_dirs=()
+use_docker=false
+
+# ---- parse options (must precede <writable-subdir>) ----
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -r|--read)
+      [ $# -ge 2 ] || { echo "claude-box: $1 needs a directory" >&2; exit 2; }
+      read_dirs+=("$2"); shift 2 ;;
+    -d|--docker) use_docker=true; shift ;;
+    -h|--help)   usage; exit 0 ;;
+    --)          shift; break ;;
+    -*)          echo "claude-box: unknown option '$1'" >&2; usage; exit 2 ;;
+    *)           break ;;
+  esac
+done
+
+if [ $# -lt 1 ]; then usage; exit 2; fi
 
 writedir="$1"
 shift
@@ -28,7 +55,7 @@ case "$abs_write/" in
 esac
 rel="${abs_write#"$base"/}"
 
-# when the writable dir IS the base, mount it rw directly; otherwise overlay rw on the ro base
+# ---- when the writable dir IS the base, mount it rw directly; otherwise overlay rw on the ro base ----
 if [ "$abs_write" = "$base" ]; then
   mounts=(-v "$base":/home/su8y/work:rw)
 else
@@ -36,11 +63,74 @@ else
           -v "$abs_write":/home/su8y/work/"$rel":rw)
 fi
 
-exec docker run -it --rm \
+# ---- extra read-only mounts (at their host absolute path, for natural refs) ----
+for d in ${read_dirs[@]+"${read_dirs[@]}"}; do
+  if ! abs_read="$(cd "$d" 2>/dev/null && pwd)"; then
+    echo "claude-box: read dir '$d' not found" >&2; exit 1
+  fi
+  mounts+=(-v "$abs_read":"$abs_read":ro)
+done
+
+# ---- resolve a GitHub token so gh inside the sandbox is authenticated ----
+# precedence: GH_TOKEN > GITHUB_TOKEN > host `gh auth token`
+gh_token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+if [ -z "$gh_token" ] && command -v gh >/dev/null 2>&1; then
+  gh_token="$(gh auth token 2>/dev/null || true)"
+fi
+
+envs=()
+if [ -n "$gh_token" ]; then
+  envs+=(-e GH_TOKEN="$gh_token")
+else
+  echo "claude-box: warning — no GitHub token found." >&2
+  echo "  gh in the sandbox will be unauthenticated: clone of private repos," >&2
+  echo "  push, and PR creation will fail. fix on the host with one of:" >&2
+  echo "    gh auth login                       # if gh is installed" >&2
+  echo "    export GH_TOKEN=<token>             # before running claude-box" >&2
+fi
+
+ts="$(date +%s)"
+
+# ---- optional isolated Docker-in-Docker daemon for integration tests ----
+net="" ; dind=""
+cleanup() {
+  [ -n "$dind" ] && docker rm -f "$dind" >/dev/null 2>&1 || true
+  [ -n "$net" ]  && docker network rm "$net" >/dev/null 2>&1 || true
+}
+docker_envs=()
+if $use_docker; then
+  echo "claude-box: starting isolated Docker-in-Docker daemon for Testcontainers..." >&2
+  net="claude-sandbox-net-$ts"
+  dind="claude-dind-$ts"
+  trap cleanup EXIT INT TERM
+  docker network create "$net" >/dev/null
+  # insecure tcp:2375 is acceptable here: the daemon lives on a private, per-run
+  # network reachable only by this run's sandbox container.
+  docker run -d --rm --privileged \
+    --name "$dind" --network "$net" --network-alias docker \
+    -e DOCKER_TLS_CERTDIR= \
+    docker:dind --host=tcp://0.0.0.0:2375 >/dev/null
+  # wait for the daemon to accept connections
+  ready=false
+  for _ in $(seq 1 30); do
+    if docker exec "$dind" docker info >/dev/null 2>&1; then ready=true; break; fi
+    sleep 1
+  done
+  $ready || { echo "claude-box: dind daemon failed to start" >&2; exit 1; }
+  docker_envs+=(--network "$net"
+    -e DOCKER_HOST=tcp://docker:2375
+    -e TESTCONTAINERS_HOST_OVERRIDE=docker
+    -e TESTCONTAINERS_RYUK_DISABLED=true)
+fi
+
+# not exec'd: we run in the foreground so the cleanup trap fires on exit.
+docker run -it --rm \
   "${mounts[@]}" \
+  ${envs[@]+"${envs[@]}"} \
+  ${docker_envs[@]+"${docker_envs[@]}"} \
   -v "$HOME/.claude":/home/su8y/.claude \
   -v "$HOME/.claude.json":/home/su8y/.claude.json \
   -w /home/su8y/work \
-  --name "claude-sandbox-$(basename "$base")-$(date +%s)" \
+  --name "claude-sandbox-$(basename "$base")-$ts" \
   claude-sandbox:latest \
   --dangerously-skip-permissions "$@"
